@@ -1,6 +1,7 @@
 mod config;
 mod provider;
 mod github;
+mod gitlab;
 
 fn main() {
     match config::load_config() {
