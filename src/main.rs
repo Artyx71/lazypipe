@@ -1,4 +1,5 @@
 mod config;
+mod provider;
 
 fn main() {
     match config::load_config() {
