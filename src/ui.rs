@@ -3,7 +3,7 @@ use ratatui::{
     layout::{Constraint, Direction, Layout, Rect},
     style::{Color, Modifier, Style},
     text::{Line, Span},
-    widgets::{Block, Borders, List, ListItem, ListState, Paragraph, Wrap},
+    widgets::{Block, Borders, Clear, List, ListItem, ListState, Paragraph, Wrap},
 };
 
 use crate::provider::PipelineStatus;
@@ -28,6 +28,10 @@ pub fn draw(frame: &mut Frame, state: &AppState) {
     draw_pipelines(frame, state, chunks[1]);
     draw_logs(frame, state, chunks[2]);
     draw_statusbar(frame, state, rows[1]);
+
+    if state.show_help {
+        draw_help_popup(frame);
+    }
 }
 
 fn border_style(active: bool) -> Style {
@@ -184,4 +188,37 @@ fn draw_statusbar(frame: &mut Frame, state: &AppState, area: Rect) {
     };
 
     frame.render_widget(Paragraph::new(line), area);
+}
+
+fn draw_help_popup(frame: &mut Frame) {
+    let area = frame.area();
+    let popup = Rect {
+        x: area.width / 2 - 20,
+        y: area.height / 2 - 6,
+        width: 40,
+        height: 12,
+    };
+
+    let lines = vec![
+        Line::from(""),
+        Line::from(vec![Span::styled("  Tab      ", Style::default().fg(Color::Yellow)), Span::raw("switch panel")]),
+        Line::from(vec![Span::styled("  j / ↓   ", Style::default().fg(Color::Yellow)), Span::raw("move down")]),
+        Line::from(vec![Span::styled("  k / ↑   ", Style::default().fg(Color::Yellow)), Span::raw("move up")]),
+        Line::from(vec![Span::styled("  R        ", Style::default().fg(Color::Yellow)), Span::raw("rerun pipeline")]),
+        Line::from(vec![Span::styled("  ?        ", Style::default().fg(Color::Yellow)), Span::raw("toggle this help")]),
+        Line::from(vec![Span::styled("  q / Esc  ", Style::default().fg(Color::Yellow)), Span::raw("quit")]),
+        Line::from(""),
+        Line::from(Span::styled("  Press ? to close", Style::default().fg(Color::DarkGray))),
+    ];
+
+    frame.render_widget(Clear, popup);
+    frame.render_widget(
+        Paragraph::new(lines).block(
+            Block::default()
+                .title(" Keybindings ")
+                .borders(Borders::ALL)
+                .border_style(Style::default().fg(Color::Yellow)),
+        ),
+        popup,
+    );
 }

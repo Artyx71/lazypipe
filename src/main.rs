@@ -70,7 +70,17 @@ async fn run_app(
 
                 let mut s = state.lock().unwrap();
                 match key.code {
-                    KeyCode::Char('q') | KeyCode::Esc => return Ok(()),
+                    KeyCode::Char('q') | KeyCode::Esc => {
+                        if s.show_help {
+                            s.show_help = false;
+                        } else {
+                            return Ok(());
+                        }
+                    }
+
+                    KeyCode::Char('?') => {
+                        s.show_help = !s.show_help;
+                    }
 
                     KeyCode::Tab => {
                         s.active_panel = match s.active_panel {

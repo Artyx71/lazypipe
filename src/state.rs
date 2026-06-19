@@ -13,6 +13,7 @@ pub enum Panel {
 
 pub struct AppState {
     pub repos: Vec<RepoConfig>,
+    pub show_help: bool,
     pub pipelines: HashMap<String, Vec<Pipeline>>,  // key: repo name
     pub jobs: HashMap<String, Vec<Job>>,             // key: pipeline id
     pub logs: HashMap<String, String>,               // key: job id
@@ -37,6 +38,7 @@ impl AppState {
             active_panel: Panel::Repos,
             error: None,
             last_updated: None,
+            show_help: false,
         }
     }
 
