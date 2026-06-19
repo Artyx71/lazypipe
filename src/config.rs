@@ -12,7 +12,7 @@ pub struct Settings {
     pub log_poll_interval_secs: u64,
 }
 
-#[derive(Deserialize)]
+#[derive(Deserialize, Clone)]
 pub struct RepoConfig {
     pub name: String,
     pub provider: String,

@@ -3,6 +3,7 @@ mod provider;
 mod github;
 mod gitlab;
 mod state;
+mod poller;
 
 fn main() {
     match config::load_config() {
