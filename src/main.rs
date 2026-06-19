@@ -111,6 +111,31 @@ async fn run_app(
                         Panel::Logs => {}
                     },
 
+                    KeyCode::Char('r') | KeyCode::Char('R') => {
+                        let repo = s.current_repo().cloned();
+                        let pipeline = s.current_pipeline().cloned();
+                        if let (Some(repo), Some(pipeline)) = (repo, pipeline) {
+                            drop(s); // release lock before async
+                            let state2 = Arc::clone(state);
+                            tokio::spawn(async move {
+                                use crate::github::GitHubClient;
+                                use crate::gitlab::GitLabClient;
+                                use crate::provider::Provider;
+                                let provider: Box<dyn Provider> = match repo.provider.as_str() {
+                                    "gitlab" => Box::new(GitLabClient::new(repo.token.clone())),
+                                    _ => Box::new(GitHubClient::new(repo.token.clone())),
+                                };
+                                match provider.rerun_pipeline(&repo.owner, &repo.repo, &pipeline.id).await {
+                                    Ok(_) => {}
+                                    Err(e) => {
+                                        state2.lock().unwrap().error = Some(e);
+                                    }
+                                }
+                            });
+                            continue;
+                        }
+                    }
+
                     _ => {}
                 }
             }
