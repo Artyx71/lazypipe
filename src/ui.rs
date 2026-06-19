@@ -10,6 +10,11 @@ use crate::provider::PipelineStatus;
 use crate::state::{AppState, Panel};
 
 pub fn draw(frame: &mut Frame, state: &AppState) {
+    let rows = Layout::default()
+        .direction(Direction::Vertical)
+        .constraints([Constraint::Min(0), Constraint::Length(1)])
+        .split(frame.area());
+
     let chunks = Layout::default()
         .direction(Direction::Horizontal)
         .constraints([
@@ -17,11 +22,12 @@ pub fn draw(frame: &mut Frame, state: &AppState) {
             Constraint::Percentage(35),
             Constraint::Percentage(40),
         ])
-        .split(frame.area());
+        .split(rows[0]);
 
     draw_repos(frame, state, chunks[0]);
     draw_pipelines(frame, state, chunks[1]);
     draw_logs(frame, state, chunks[2]);
+    draw_statusbar(frame, state, rows[1]);
 }
 
 fn border_style(active: bool) -> Style {
@@ -149,4 +155,33 @@ fn draw_logs(frame: &mut Frame, state: &AppState, area: Rect) {
             .wrap(Wrap { trim: false }),
         area,
     );
+}
+
+fn draw_statusbar(frame: &mut Frame, state: &AppState, area: Rect) {
+    let updated = state.last_updated
+        .map(|t| {
+            let secs = t.elapsed().as_secs();
+            if secs < 60 {
+                format!("updated {}s ago", secs)
+            } else {
+                format!("updated {}m ago", secs / 60)
+            }
+        })
+        .unwrap_or_else(|| "loading…".to_string());
+
+    let hints = " Tab:panel  j/k:nav  R:rerun  q:quit";
+
+    let line = if let Some(err) = &state.error {
+        Line::from(vec![
+            Span::styled(format!(" ✗ {} ", err), Style::default().fg(Color::Red)),
+            Span::styled(hints, Style::default().fg(Color::DarkGray)),
+        ])
+    } else {
+        Line::from(vec![
+            Span::styled(format!(" {} ", updated), Style::default().fg(Color::DarkGray)),
+            Span::styled(hints, Style::default().fg(Color::DarkGray)),
+        ])
+    };
+
+    frame.render_widget(Paragraph::new(line), area);
 }
