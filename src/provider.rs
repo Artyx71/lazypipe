@@ -1,5 +1,6 @@
 use async_trait::async_trait;
 
+#[derive(Clone, Debug)]
 pub enum PipelineStatus {
     Success,
     Failed,
@@ -9,6 +10,7 @@ pub enum PipelineStatus {
     Unknown,
 }
 
+#[derive(Clone, Debug)]
 pub struct Pipeline {
     pub id: String,
     pub name: String,
@@ -17,6 +19,7 @@ pub struct Pipeline {
     pub url: String,
 }
 
+#[derive(Clone, Debug)]
 pub struct Job {
     pub id: String,
     pub name: String,
