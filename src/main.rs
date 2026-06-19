@@ -4,6 +4,7 @@ mod github;
 mod gitlab;
 mod state;
 mod poller;
+mod ui;
 
 fn main() {
     match config::load_config() {
