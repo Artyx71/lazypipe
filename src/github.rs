@@ -17,6 +17,24 @@ impl GitHubClient {
     fn auth_header(&self) -> String {
         format!("Bearer {}", self.token)
     }
+
+    fn gh_request(&self, url: &str) -> reqwest::RequestBuilder {
+        self.client
+            .get(url)
+            .header("Authorization", self.auth_header())
+            .header("Accept", "application/vnd.github+json")
+            .header("User-Agent", "lazypipe/0.1")
+    }
+}
+
+async fn check_status(resp: reqwest::Response) -> Result<reqwest::Response, String> {
+    match resp.status().as_u16() {
+        401 => Err("Invalid GitHub token (401)".to_string()),
+        403 => Err("GitHub access forbidden (403) — check token scopes".to_string()),
+        404 => Err("Repo not found (404) — check owner/repo in config".to_string()),
+        s if s >= 400 => Err(format!("GitHub API error: HTTP {}", s)),
+        _ => Ok(resp),
+    }
 }
 
 #[derive(Deserialize)]
@@ -68,13 +86,9 @@ impl Provider for GitHubClient {
             "https://api.github.com/repos/{}/{}/actions/runs?per_page=20",
             owner, repo
         );
-        let resp: RunsResponse = self.client
-            .get(&url)
-            .header("Authorization", self.auth_header())
-            .header("Accept", "application/vnd.github+json")
-            .header("User-Agent", "lazypipe/0.1")
-            .send().await.map_err(|e| e.to_string())?
-            .json().await.map_err(|e| e.to_string())?;
+        let resp: RunsResponse = check_status(
+            self.gh_request(&url).send().await.map_err(|e| e.to_string())?
+        ).await?.json().await.map_err(|e| e.to_string())?;
 
         Ok(resp.workflow_runs.into_iter().map(|r| Pipeline {
             id: r.id.to_string(),
@@ -90,13 +104,9 @@ impl Provider for GitHubClient {
             "https://api.github.com/repos/{}/{}/actions/runs/{}/jobs",
             owner, repo, pipeline_id
         );
-        let resp: JobsResponse = self.client
-            .get(&url)
-            .header("Authorization", self.auth_header())
-            .header("Accept", "application/vnd.github+json")
-            .header("User-Agent", "lazypipe/0.1")
-            .send().await.map_err(|e| e.to_string())?
-            .json().await.map_err(|e| e.to_string())?;
+        let resp: JobsResponse = check_status(
+            self.gh_request(&url).send().await.map_err(|e| e.to_string())?
+        ).await?.json().await.map_err(|e| e.to_string())?;
 
         Ok(resp.jobs.into_iter().map(|j| Job {
             id: j.id.to_string(),
@@ -110,14 +120,9 @@ impl Provider for GitHubClient {
             "https://api.github.com/repos/{}/{}/actions/jobs/{}/logs",
             owner, repo, job_id
         );
-        // GitHub redirects to plain text log — reqwest follows redirect automatically
-        let text = self.client
-            .get(&url)
-            .header("Authorization", self.auth_header())
-            .header("Accept", "application/vnd.github+json")
-            .header("User-Agent", "lazypipe/0.1")
-            .send().await.map_err(|e| e.to_string())?
-            .text().await.map_err(|e| e.to_string())?;
+        let text = check_status(
+            self.gh_request(&url).send().await.map_err(|e| e.to_string())?
+        ).await?.text().await.map_err(|e| e.to_string())?;
 
         Ok(text)
     }
@@ -134,10 +139,6 @@ impl Provider for GitHubClient {
             .header("User-Agent", "lazypipe/0.1")
             .send().await.map_err(|e| e.to_string())?;
 
-        if resp.status().is_success() {
-            Ok(())
-        } else {
-            Err(format!("Rerun failed: HTTP {}", resp.status()))
-        }
+        check_status(resp).await.map(|_| ())
     }
 }
