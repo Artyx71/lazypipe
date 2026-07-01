@@ -11,9 +11,16 @@ pub enum Panel {
     Logs,
 }
 
+#[derive(Clone, Debug, PartialEq)]
+pub enum ConfirmAction {
+    Rerun,
+    Cancel,
+}
+
 pub struct AppState {
     pub repos: Vec<RepoConfig>,
     pub show_help: bool,
+    pub confirm: Option<ConfirmAction>,
     pub pipelines: HashMap<String, Vec<Pipeline>>,  // key: repo name
     pub jobs: HashMap<String, Vec<Job>>,             // key: pipeline id
     pub logs: HashMap<String, String>,               // key: job id
@@ -39,6 +46,7 @@ impl AppState {
             error: None,
             last_updated: None,
             show_help: false,
+            confirm: None,
         }
     }
 

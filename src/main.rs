@@ -17,7 +17,7 @@ use crossterm::{
 };
 use ratatui::{Terminal, backend::CrosstermBackend};
 
-use state::{AppState, Panel};
+use state::{AppState, ConfirmAction, Panel};
 
 #[tokio::main]
 async fn main() {
@@ -122,27 +122,42 @@ async fn run_app(
                     },
 
                     KeyCode::Char('r') | KeyCode::Char('R') => {
-                        let repo = s.current_repo().cloned();
-                        let pipeline = s.current_pipeline().cloned();
-                        if let (Some(repo), Some(pipeline)) = (repo, pipeline) {
-                            drop(s); // release lock before async
-                            let state2 = Arc::clone(state);
-                            tokio::spawn(async move {
-                                use crate::github::GitHubClient;
-                                use crate::gitlab::GitLabClient;
-                                use crate::provider::Provider;
-                                let provider: Box<dyn Provider> = match repo.provider.as_str() {
-                                    "gitlab" => Box::new(GitLabClient::new(repo.token.clone())),
-                                    _ => Box::new(GitHubClient::new(repo.token.clone())),
-                                };
-                                match provider.rerun_pipeline(&repo.owner, &repo.repo, &pipeline.id).await {
-                                    Ok(_) => {}
-                                    Err(e) => {
+                        if s.current_pipeline().is_some() {
+                            s.confirm = Some(ConfirmAction::Rerun);
+                        }
+                    }
+
+                    KeyCode::Char('c') | KeyCode::Char('C') => {
+                        if s.current_pipeline().is_some() {
+                            s.confirm = Some(ConfirmAction::Cancel);
+                        }
+                    }
+
+                    KeyCode::Char('y') | KeyCode::Char('Y') => {
+                        if let Some(action) = s.confirm.take() {
+                            let repo = s.current_repo().cloned();
+                            let pipeline = s.current_pipeline().cloned();
+                            if let (Some(repo), Some(pipeline)) = (repo, pipeline) {
+                                drop(s);
+                                let state2 = Arc::clone(state);
+                                tokio::spawn(async move {
+                                    use crate::github::GitHubClient;
+                                    use crate::gitlab::GitLabClient;
+                                    use crate::provider::Provider;
+                                    let provider: Box<dyn Provider> = match repo.provider.as_str() {
+                                        "gitlab" => Box::new(GitLabClient::new(repo.token.clone())),
+                                        _ => Box::new(GitHubClient::new(repo.token.clone())),
+                                    };
+                                    let result = match action {
+                                        ConfirmAction::Rerun => provider.rerun_pipeline(&repo.owner, &repo.repo, &pipeline.id).await,
+                                        ConfirmAction::Cancel => provider.cancel_pipeline(&repo.owner, &repo.repo, &pipeline.id).await,
+                                    };
+                                    if let Err(e) = result {
                                         state2.lock().unwrap().error = Some(e);
                                     }
-                                }
-                            });
-                            continue;
+                                });
+                                continue;
+                            }
                         }
                     }
 

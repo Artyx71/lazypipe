@@ -7,7 +7,7 @@ use ratatui::{
 };
 
 use crate::provider::PipelineStatus;
-use crate::state::{AppState, Panel};
+use crate::state::{AppState, ConfirmAction, Panel};
 
 pub fn draw(frame: &mut Frame, state: &AppState) {
     let rows = Layout::default()
@@ -31,6 +31,10 @@ pub fn draw(frame: &mut Frame, state: &AppState) {
 
     if state.show_help {
         draw_help_popup(frame);
+    }
+
+    if let Some(action) = &state.confirm {
+        draw_confirm_popup(frame, action);
     }
 }
 
@@ -218,6 +222,44 @@ fn draw_help_popup(frame: &mut Frame) {
                 .title(" Keybindings ")
                 .borders(Borders::ALL)
                 .border_style(Style::default().fg(Color::Yellow)),
+        ),
+        popup,
+    );
+}
+
+fn draw_confirm_popup(frame: &mut Frame, action: &ConfirmAction) {
+    let area = frame.area();
+    let popup = Rect {
+        x: area.width / 2 - 18,
+        y: area.height / 2 - 3,
+        width: 36,
+        height: 6,
+    };
+
+    let (title, msg, color) = match action {
+        ConfirmAction::Rerun => (" Confirm Rerun ", "Rerun this pipeline?", Color::Cyan),
+        ConfirmAction::Cancel => (" Confirm Cancel ", "Cancel this pipeline?", Color::Red),
+    };
+
+    let lines = vec![
+        Line::from(""),
+        Line::from(Span::styled(format!("  {}", msg), Style::default().fg(color))),
+        Line::from(""),
+        Line::from(vec![
+            Span::styled("  y", Style::default().fg(Color::Green)),
+            Span::raw(" confirm   "),
+            Span::styled("n/Esc", Style::default().fg(Color::DarkGray)),
+            Span::raw(" cancel"),
+        ]),
+    ];
+
+    frame.render_widget(Clear, popup);
+    frame.render_widget(
+        Paragraph::new(lines).block(
+            Block::default()
+                .title(title)
+                .borders(Borders::ALL)
+                .border_style(Style::default().fg(color)),
         ),
         popup,
     );
