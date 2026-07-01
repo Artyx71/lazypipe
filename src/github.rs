@@ -141,4 +141,19 @@ impl Provider for GitHubClient {
 
         check_status(resp).await.map(|_| ())
     }
+
+    async fn cancel_pipeline(&self, owner: &str, repo: &str, pipeline_id: &str) -> Result<(), String> {
+        let url = format!(
+            "https://api.github.com/repos/{}/{}/actions/runs/{}/cancel",
+            owner, repo, pipeline_id
+        );
+        let resp = self.client
+            .post(&url)
+            .header("Authorization", self.auth_header())
+            .header("Accept", "application/vnd.github+json")
+            .header("User-Agent", "lazypipe/0.1")
+            .send().await.map_err(|e| e.to_string())?;
+
+        check_status(resp).await.map(|_| ())
+    }
 }

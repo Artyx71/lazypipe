@@ -32,4 +32,5 @@ pub trait Provider: Send + Sync {
     async fn list_jobs(&self, owner: &str, repo: &str, pipeline_id: &str) -> Result<Vec<Job>, String>;
     async fn get_logs(&self, owner: &str, repo: &str, job_id: &str) -> Result<String, String>;
     async fn rerun_pipeline(&self, owner: &str, repo: &str, pipeline_id: &str) -> Result<(), String>;
+    async fn cancel_pipeline(&self, owner: &str, repo: &str, pipeline_id: &str) -> Result<(), String>;
 }

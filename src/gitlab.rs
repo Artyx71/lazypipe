@@ -121,4 +121,15 @@ impl Provider for GitLabClient {
 
         check_status(resp).await.map(|_| ())
     }
+
+    async fn cancel_pipeline(&self, owner: &str, repo: &str, pipeline_id: &str) -> Result<(), String> {
+        let path = Self::project_path(owner, repo);
+        let url = format!("{}/api/v4/projects/{}/pipelines/{}/cancel", self.base_url, path, pipeline_id);
+        let resp = self.client
+            .post(&url)
+            .header("PRIVATE-TOKEN", &self.token)
+            .send().await.map_err(|e| e.to_string())?;
+
+        check_status(resp).await.map(|_| ())
+    }
 }
